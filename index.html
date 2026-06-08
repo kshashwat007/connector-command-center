@@ -407,6 +407,10 @@
   <a href="#connector-kb">connector-kb</a>
   <a href="#flex-kit">2-min-flex-kit</a>
   <a href="#companies-hiring">companies-hiring</a>
+  <a href="#fulfillment">fulfillment-skill</a>
+
+  <div class="nav-section">Playbooks</div>
+  <a href="#osha-lane">OSHA lane</a>
 
   <div class="nav-section">Setup</div>
   <a href="#keys">Keys</a>
@@ -751,6 +755,128 @@
     <p style="margin-top:10px; font-size:12px;">Set in: <code>.claude/skills/companies-hiring/.env</code> — no "Bearer" prefix in Authorization header.</p>
   </section>
 
+  <!-- SKILL: FULFILLMENT -->
+  <section id="fulfillment">
+    <h2>fulfillment-skill</h2>
+    <p>Post-sale execution path. Client paid, intake call done. Turn the Fathom transcript into a clean, ready-to-reach list of real people. The client never decides who fits — the transcript is the filter spec.</p>
+
+    <div class="card" style="border-left: 3px solid var(--amber);">
+      <div class="card-title">This is the no-inventory path</div>
+      <div class="card-body">Don't check the two lists first. This skill exists for when you don't already have them. Go straight to the public databases. If no clean dataset exists, it builds the scraper that gets it.</div>
+    </div>
+
+    <h3>Two modes</h3>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
+      <div class="card" style="border-top: 2px solid var(--green);">
+        <div class="card-title"><span class="badge badge-green">Run</span></div>
+        <div class="card-body">Executes all 6 stages end to end without stopping.<br/><br/>Triggers: "go", "run it", "fulfill this", "find them", "pull the list"</div>
+      </div>
+      <div class="card" style="border-top: 2px solid var(--accent);">
+        <div class="card-title"><span class="badge badge-purple">Plan-first</span></div>
+        <div class="card-body">Extracts ICP + names the lane, then stops for your go. Default when unsure.<br/><br/>Triggers: "plan only", "show me the plan first", "what would you do"</div>
+      </div>
+    </div>
+
+    <h3>The 6 stages</h3>
+    <ul class="rule-list" style="margin-top:10px;">
+      <li><span class="rule-num">01</span><span><strong style="color:var(--text)">Read transcript</strong> — extract geography, perfect accounts, deal-size floor, hard excludes. Make the call; don't stall on vague input.</span></li>
+      <li><span class="rule-num">02</span><span><strong style="color:var(--text)">Map ICP to databases</strong> — EPA ECHO, FMCSA/SODA, state permit registries, other Socrata portals. Skip generic business directories.</span></li>
+      <li><span class="rule-num">03</span><span><strong style="color:var(--text)">Pull fits, drop non-fits</strong> — you apply the transcript as the filter. If the honest count is 40, deliver 40. Never loosen fit to inflate the number.</span></li>
+      <li><span class="rule-num">04</span><span><strong style="color:var(--text)">Build the scraper if needed</strong> — market on web pages or a search UI? Build it. Stack: Apify Actor + TypeScript + Crawlee. Full doctrine in <code>build-a-scraper/</code>.</span></li>
+      <li><span class="rule-num">05</span><span><strong style="color:var(--text)">Enrich</strong> — native email verify → Apollo → AMF → phone-only fallback.</span></li>
+      <li><span class="rule-num">06</span><span><strong style="color:var(--text)">Deliver</strong> — clean CSV: company, contact, verified email or phone, and the signal that qualified them. Offer first-touch copy next.</span></li>
+    </ul>
+
+    <h3>How to call it</h3>
+    <div class="trigger-list">
+      <span class="trigger">/fulfillment-skill</span>
+      <span class="trigger">here's the call, find them</span>
+      <span class="trigger">fulfill this client</span>
+      <span class="trigger">build the list from this transcript</span>
+      <span class="trigger">find them for this client</span>
+    </div>
+
+    <h3>Hard rules</h3>
+    <ul class="rule-list">
+      <li><span class="rule-num">01</span> The client never qualifies. The transcript already answered it. Decide and move.</li>
+      <li><span class="rule-num">02</span> Thin market = surface it to the connector, not the client. "This ICP yields N real fits. Widening means relaxing X."</li>
+      <li><span class="rule-num">03</span> Never buy inboxes or domains for the client. Use your own sending infra.</li>
+      <li><span class="rule-num">04</span> Honor the exclude list absolutely — but know which exclusions are filterable at source vs. post-pull blocklist.</li>
+      <li><span class="rule-num">05</span> Government APIs silently ignore unknown params. Sanity-check: add a filter, count must drop. If it doesn't, the param name is wrong.</li>
+    </ul>
+
+    <h3>Keys required</h3>
+    <div class="trigger-list">
+      <span class="trigger">APOLLO_KEY</span>
+      <span class="trigger">ANYMAILFINDER_KEY</span>
+    </div>
+  </section>
+
+  <!-- PLAYBOOK: OSHA LANE -->
+  <section id="osha-lane">
+    <div class="section-label">Playbooks</div>
+    <h2>OSHA Lane</h2>
+    <p>Mid-size manufacturers + warehousing (NAICS 31-33, 493) with fresh serious / willful / repeat OSHA citations. Free public API. The abatement clock is running — timing is the edge, and it doesn't exist in any list shop.</p>
+
+    <div class="card" style="border-left: 3px solid var(--red);">
+      <div class="card-title">The signal</div>
+      <div class="card-body">DOL publishes every OSHA inspection and violation. Fresh citation + open abatement = real cost of not fixing. "Cited by OSHA in the last 90 days, abatement clock running" is not a ZoomInfo filter. It's only in the free government data.</div>
+    </div>
+
+    <h3>6-stage pipeline</h3>
+    <ul class="rule-list" style="margin-top:10px;">
+      <li><span class="rule-num">01</span><span><strong style="color:var(--text)">Pull</strong> — <code>python3 scripts/osha_pull.py &lt;DOL_KEY&gt; ./out</code>. Window: 300 days back to 60 days back. Don't pull fresher — citations post ~30 days after issuance. Script self-checkpoints.</span></li>
+      <li><span class="rule-num">02</span><span><strong style="color:var(--text)">Aggregate</strong> — <code>python3 scripts/osha_aggregate.py</code>. Per-company rollups: severity counts, summed penalties, latest issuance, open abatement, headcount band, multi-site flag.</span></li>
+      <li><span class="rule-num">03</span><span><strong style="color:var(--text)">Enrich</strong> — Apollo <code>mixed_companies/search</code> for domain, then AnyMailFinder rotating <code>ceo → operations → finance</code>. Expect ~50-60% domain resolve, ~40% verified email, ~30% phone salvage. Charges only on found email.</span></li>
+      <li><span class="rule-num">04</span><span><strong style="color:var(--text)">QA gate</strong> — drop foreign TLDs, apply category excludes, flag giants, eyeball every name/domain mismatch. ~20-25% attrition expected. That's the gate working.</span></li>
+      <li><span class="rule-num">05</span><span><strong style="color:var(--text)">Campaign</strong> — Instantly via MCP. <code>track_opens:false</code>, <code>track_clicks:false</code>, <code>stop_on_reply:true</code>, 1-day step delays. Leave in DRAFT — you launch.</span></li>
+      <li><span class="rule-num">06</span><span><strong style="color:var(--text)">CRM cards</strong> — score: <code>25×willful + 15×repeat + 3×serious + penalty/10000 + recency + multi-site + band bonus</code>. Verdict always starts PENDING.</span></li>
+    </ul>
+
+    <h3>The copy (3-step)</h3>
+    <div class="card">
+      <div class="card-body" style="line-height:1.9;">
+        <strong style="color:var(--text)">Email 1</strong> — Subject: <code>Safety remediation</code><br/>
+        "I have an EHS specialist taking on mid-size [REGION] plants with open OSHA citations right now — abatement through the re-inspection, so it stays closed. [ONE TRUE PROOF LINE or omit.] If anything's open on your side, would love to point them at it."<br/><br/>
+        <strong style="color:var(--text)">Email 2</strong> — day +1, blank subject (threads)<br/>
+        "Hey {{firstName}} — is resolving anything open with OSHA a priority for you right now?"<br/><br/>
+        <strong style="color:var(--text)">Email 3</strong> — day +2, blank subject (breakup)<br/>
+        "Leaving the door open. When it makes sense to get a citation closed properly, I'm one reply away."
+      </div>
+    </div>
+
+    <h3>Cost (live run 2026-06-04)</h3>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
+      <div class="card" style="border-top: 2px solid var(--green);">
+        <div class="card-title"><span class="badge badge-green">This pipeline</span></div>
+        <div class="card-body">462 enriched companies, 385 verified emails<br/><strong style="color:var(--green)">~$35-38 total</strong> (~$0.10/verified email)<br/>Repeat runs: ~10 min, same marginal cost<br/>DOL data: $0 — free public API</div>
+      </div>
+      <div class="card" style="border-top: 2px solid var(--red);">
+        <div class="card-title"><span class="badge badge-red">Bought equivalent</span></div>
+        <div class="card-body">$700-4,600 per batch<br/>ZoomInfo: $15K+/yr minimum<br/>And the citation trigger doesn't exist in any list shop</div>
+      </div>
+    </div>
+
+    <h3>Weekly cadence</h3>
+    <p>Re-run Stage 1 every Monday. The date window slides itself. Thin week = information, not failure.</p>
+
+    <h3>Scripts</h3>
+    <div class="card">
+      <div class="card-body" style="font-family: var(--mono); font-size: 11px; line-height: 2; color: #6b6b7a;">
+        osha-lane-playbook/scripts/osha_pull.py<br/>
+        osha-lane-playbook/scripts/osha_aggregate.py
+      </div>
+    </div>
+
+    <h3>Keys required</h3>
+    <div class="trigger-list">
+      <span class="trigger">DOL_API_KEY</span>
+      <span class="trigger">APOLLO_KEY</span>
+      <span class="trigger">ANYMAILFINDER_KEY</span>
+    </div>
+    <p style="margin-top:10px; font-size:12px;">DOL key: free at <code>dataportal.dol.gov</code> — register, then API key (~2 min).</p>
+  </section>
+
   <!-- KEYS -->
   <section id="keys">
     <div class="section-label">Setup</div>
@@ -785,6 +911,11 @@
           <td>AMF_API_KEY</td>
           <td>companies-hiring</td>
           <td><code>skills/companies-hiring/.env</code> — no Bearer prefix</td>
+        </tr>
+        <tr>
+          <td>DOL_API_KEY</td>
+          <td>osha-lane</td>
+          <td><code>osha-lane-playbook/scripts/osha_pull.py</code> — passed as first arg</td>
         </tr>
       </tbody>
     </table>
