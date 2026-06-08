@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Connector Command Center</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d0d0f;
+      --surface:   #141416;
+      --border:    #1f1f23;
+      --border-hi: #2e2e35;
+      --text:      #e2e2e8;
+      --muted:     #6b6b7a;
+      --accent:    #7c6af7;
+      --accent-lo: #1e1a3a;
+      --green:     #3ecf8e;
+      --green-lo:  #0d2a1f;
+      --amber:     #f5a623;
+      --amber-lo:  #2a1e08;
+      --red:       #f04;
+      --red-lo:    #2a0008;
+      --mono:      'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      --sans:      -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      --sidebar-w: 220px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.6;
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ── SIDEBAR ── */
+    nav {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      overflow-y: auto;
+      padding: 28px 0 40px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .nav-logo {
+      padding: 0 20px 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+    .nav-logo .wordmark {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .nav-logo .sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .nav-section {
+      padding: 0 12px 6px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    nav a {
+      display: block;
+      padding: 7px 20px;
+      font-size: 13px;
+      color: var(--muted);
+      text-decoration: none;
+      border-radius: 0;
+      transition: color .15s, background .15s;
+      border-left: 2px solid transparent;
+    }
+    nav a:hover {
+      color: var(--text);
+      background: var(--border);
+    }
+    nav a.active {
+      color: var(--accent);
+      border-left-color: var(--accent);
+      background: var(--accent-lo);
+    }
+
+    /* ── MAIN ── */
+    main {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      max-width: 860px;
+      padding: 56px 48px 120px;
+    }
+
+    /* ── SECTIONS ── */
+    section {
+      margin-bottom: 72px;
+    }
+
+    .section-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -.02em;
+      line-height: 1.2;
+      margin-bottom: 12px;
+    }
+
+    h2 {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -.01em;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 8px;
+      margin-top: 24px;
+    }
+
+    p {
+      color: #aaaabc;
+      margin-bottom: 12px;
+      max-width: 640px;
+    }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin-bottom: 12px;
+    }
+    .card:hover {
+      border-color: var(--border-hi);
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-body {
+      font-size: 13px;
+      color: #8888a0;
+      line-height: 1.65;
+    }
+
+    /* ── BADGES ── */
+    .badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .badge-purple { background: var(--accent-lo); color: var(--accent); }
+    .badge-green  { background: var(--green-lo);  color: var(--green);  }
+    .badge-amber  { background: var(--amber-lo);  color: var(--amber);  }
+    .badge-red    { background: var(--red-lo);    color: var(--red);    }
+
+    /* ── CODE / TRIGGER ── */
+    code {
+      font-family: var(--mono);
+      font-size: 12px;
+      background: #1a1a20;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      color: var(--green);
+    }
+
+    .trigger-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .trigger {
+      font-family: var(--mono);
+      font-size: 11px;
+      background: #141418;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 3px 9px;
+      color: #9090b0;
+    }
+
+    /* ── DOCTRINE TABLE ── */
+    .doctrine-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .doctrine-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 18px;
+    }
+    .doctrine-card:hover { border-color: var(--border-hi); }
+    .doctrine-rule {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+    .doctrine-body {
+      font-size: 12px;
+      color: #8888a0;
+      line-height: 1.55;
+    }
+
+    /* ── RULE LIST ── */
+    .rule-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .rule-list li {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      font-size: 13px;
+      color: #9090a8;
+    }
+    .rule-num {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      min-width: 20px;
+      padding-top: 1px;
+    }
+
+    /* ── VOCAB TABLE ── */
+    .vocab-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .vocab-table th {
+      text-align: left;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 0 16px 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .vocab-table td {
+      padding: 10px 16px 10px 0;
+      border-bottom: 1px solid var(--border);
+      color: #9090a8;
+      vertical-align: top;
+    }
+    .vocab-table td:first-child {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--amber);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .vocab-table tr:last-child td { border-bottom: none; }
+
+    /* ── DIVIDER ── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 32px 0;
+    }
+
+    /* ── KEYS TABLE ── */
+    .keys-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .keys-table th {
+      text-align: left;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 0 16px 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .keys-table td {
+      padding: 10px 16px 10px 0;
+      border-bottom: 1px solid var(--border);
+      color: #9090a8;
+      vertical-align: top;
+    }
+    .keys-table td:first-child {
+      font-family: var(--mono);
+      color: var(--green);
+    }
+    .keys-table tr:last-child td { border-bottom: none; }
+
+    /* ── PERMISSION GRID ── */
+    .perm-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .perm-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 18px;
+    }
+    .perm-card.can { border-top: 2px solid var(--green); }
+    .perm-card.cant { border-top: 2px solid var(--red); }
+    .perm-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .perm-card.can .perm-label  { color: var(--green); }
+    .perm-card.cant .perm-label { color: var(--red); }
+    .perm-card ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .perm-card ul li {
+      font-size: 12px;
+      color: #8888a0;
+      padding-left: 14px;
+      position: relative;
+    }
+    .perm-card.can  ul li::before { content: ''; position: absolute; left: 0; top: 8px; width: 5px; height: 5px; background: var(--green); border-radius: 50%; }
+    .perm-card.cant ul li::before { content: ''; position: absolute; left: 0; top: 8px; width: 5px; height: 5px; background: var(--red);  border-radius: 50%; }
+
+    /* ── SCROLL ACTIVE LINK ── */
+    @media (max-width: 800px) {
+      nav { display: none; }
+      main { margin-left: 0; padding: 32px 24px 80px; }
+      .doctrine-grid, .perm-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="nav-logo">
+    <div class="wordmark">Command Center</div>
+    <div class="sub">Connector Model — Krishanu</div>
+  </div>
+
+  <div class="nav-section">Identity</div>
+  <a href="#identity">Who we are</a>
+  <a href="#model">The model</a>
+
+  <div class="nav-section">Operating Rules</div>
+  <a href="#doctrine">Doctrine</a>
+  <a href="#permissions">Permissions</a>
+  <a href="#vocab">Vocabulary</a>
+
+  <div class="nav-section">Skills</div>
+  <a href="#connector-kb">connector-kb</a>
+  <a href="#flex-kit">2-min-flex-kit</a>
+  <a href="#companies-hiring">companies-hiring</a>
+
+  <div class="nav-section">Setup</div>
+  <a href="#keys">Keys</a>
+</nav>
+
+<!-- MAIN -->
+<main>
+
+  <!-- IDENTITY -->
+  <section id="identity">
+    <div class="section-label">Identity</div>
+    <h1>Connector Business</h1>
+    <p>Operator: <strong style="color:var(--text)">Krishanu</strong>. Market-making operation with a relationship wrapper. Sense active needs on both sides of a niche transaction. Get paid to route matches. Never fulfill the work.</p>
+
+    <div class="card" style="margin-top:24px; border-left: 3px solid var(--accent);">
+      <div class="card-title">The one rule that can't break</div>
+      <div class="card-body">The moment you take on custom delivery, the flywheel dies. Connector only. Never agency.</div>
+    </div>
+  </section>
+
+  <!-- THE MODEL -->
+  <section id="model">
+    <h2>The Model</h2>
+    <p>Three primitives. Everything runs through them.</p>
+
+    <div class="card">
+      <div class="card-title"><span class="badge badge-purple">Lane</span></div>
+      <div class="card-body">The one niche you operate on both sides. Supply and demand live in the same lane. Don't straddle.</div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="badge badge-green">Lens</span></div>
+      <div class="card-body">The signal that marks a situation as active right now. Enforcement action. Compliance deadline. Hiring surge. Funding event. No lens = no timing = no urgency.</div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="badge badge-amber">Flow</span></div>
+      <div class="card-body">Live, queryable state-map of every node you've touched. Supply or demand. Cold → warmed → in-dialogue → routed. This is the asset.</div>
+    </div>
+
+    <hr class="divider" />
+
+    <h3>Active Penalty Markets</h3>
+    <p>Any market with a public enforcement database, daily cost of not fixing, and an existing fixer ecosystem.</p>
+    <div class="trigger-list">
+      <span class="trigger">FMCSA / DOT</span>
+      <span class="trigger">OSHA</span>
+      <span class="trigger">EPA / ECHO</span>
+      <span class="trigger">FDA 483s</span>
+      <span class="trigger">MSHA</span>
+      <span class="trigger">DOL Wage & Hour</span>
+      <span class="trigger">SEC / FINRA</span>
+      <span class="trigger">SBA</span>
+    </div>
+    <p style="margin-top:14px; font-size:12px;">Meta-source: <code>Violation Tracker</code> (Good Jobs First) — 450+ agencies, sortable.</p>
+  </section>
+
+  <!-- DOCTRINE -->
+  <section id="doctrine">
+    <div class="section-label">Operating Rules</div>
+    <h2>Doctrine</h2>
+    <p>Eight rules. Internalized, not referenced.</p>
+
+    <div class="doctrine-grid">
+      <div class="doctrine-card">
+        <div class="doctrine-rule">Partnership over product</div>
+        <div class="doctrine-body">Trust is load-bearing. When speed conflicts with trust, trust wins.</div>
+      </div>
+      <div class="doctrine-card">
+        <div class="doctrine-rule">Locked response format</div>
+        <div class="doctrine-body">Fix/investigation = root cause / fix / files / proof / next action. No options menus.</div>
+      </div>
+      <div class="doctrine-card">
+        <div class="doctrine-rule">Mid-thought phone call</div>
+        <div class="doctrine-body">Sound like a friend mid-call. Contractions, no formal openers, no wrap-up summaries.</div>
+      </div>
+      <div class="doctrine-card">
+        <div class="doctrine-rule">No honesty hedge</div>
+        <div class="doctrine-body">Never say "honestly" or "to be honest." If the take needs the hedge, rewrite the take.</div>
+      </div>
+      <div class="doctrine-card">
+        <div class="doctrine-rule">Calm under pressure</div>
+        <div class="doctrine-body">Hypothesis fails: "OK, that rules out X. Next probe is Y." Two sentences. No apology.</div>
+      </div>
+      <div class="doctrine-card">
+        <div class="doctrine-rule">Always a fix</div>
+        <div class="doctrine-body">Name it, scope it, ship it. Skip the apology — the fix is the apology.</div>
+      </div>
+      <div class="doctrine-card">
+        <div class="doctrine-rule">Evidence reset protocol</div>
+        <div class="doctrine-body">Two failed hypotheses = stop. Run the 7-step evidence reset. No theory #3.</div>
+      </div>
+      <div class="doctrine-card">
+        <div class="doctrine-rule">One data point is not a diagnosis</div>
+        <div class="doctrine-body">N=1 is not a system-level claim. Need N=3 before calling anything broken or fixed.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PERMISSIONS -->
+  <section id="permissions">
+    <h2>Permissions</h2>
+    <p>What I can do without asking vs. what needs your go first.</p>
+
+    <div class="perm-grid">
+      <div class="perm-card can">
+        <div class="perm-label">Can do without asking</div>
+        <ul>
+          <li>Read files, run searches, query locally</li>
+          <li>Edit files — the diff is the proposal</li>
+          <li>Run scripts, builds, local processes</li>
+          <li>Make calls when evidence supports them</li>
+          <li>Push back before you commit to the wrong direction</li>
+        </ul>
+      </div>
+      <div class="perm-card cant">
+        <div class="perm-label">Needs your "go" first</div>
+        <ul>
+          <li>Delete files in user-owned directories</li>
+          <li>Send real messages, emails, or API calls hitting real people</li>
+          <li>Push, deploy, or commit</li>
+          <li>Mutate production data or live campaigns in Instantly</li>
+        </ul>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <h3>Hard Rules</h3>
+    <ul class="rule-list">
+      <li><span class="rule-num">01</span> Don't sell AI. Automation is backstage; relationship is front stage.</li>
+      <li><span class="rule-num">02</span> Never create fulfillment depth — connector only, never agency.</li>
+      <li><span class="rule-num">03</span> Demand copy speaks market-level — never name the scraped signal.</li>
+      <li><span class="rule-num">04</span> Volume floor: 150 minimum, target up to 400. Never ship 20–30.</li>
+      <li><span class="rule-num">05</span> Verify end-state in Instantly before declaring a step done.</li>
+      <li><span class="rule-num">06</span> No em-dashes in copy.</li>
+      <li><span class="rule-num">07</span> No A/B menus when the choice is reversible.</li>
+      <li><span class="rule-num">08</span> No "want me to apply?" closes for reversible work.</li>
+    </ul>
+  </section>
+
+  <!-- VOCABULARY -->
+  <section id="vocab">
+    <h2>Vocabulary</h2>
+    <p>What your words actually mean. Claude reads these before every reply.</p>
+
+    <table class="vocab-table">
+      <thead>
+        <tr>
+          <th>Word</th>
+          <th>Meaning</th>
+          <th>Claude does</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>"ok" lowercase</td>
+          <td>Yes. Lower energy. Acknowledged.</td>
+          <td>Continues without re-asking.</td>
+        </tr>
+        <tr>
+          <td>"go"</td>
+          <td>Execute now. Full authority for the named scope.</td>
+          <td>Ships it. No more discussion.</td>
+        </tr>
+        <tr>
+          <td>"wait" / "hold on"</td>
+          <td>Stop and listen.</td>
+          <td>Pauses, keeps state, waits.</td>
+        </tr>
+        <tr>
+          <td>"fine"</td>
+          <td>Neutral acceptance.</td>
+          <td>Proceeds conservatively.</td>
+        </tr>
+        <tr>
+          <td>"OK" caps</td>
+          <td>Treat same as "ok" until corrected.</td>
+          <td>Continues.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- SKILL: CONNECTOR-KB -->
+  <section id="connector-kb">
+    <div class="section-label">Skills</div>
+    <h2>connector-kb</h2>
+    <p>Full operating playbook for the connector business. Not a single-action tool — an operating system. Invoke any step and it routes to the right recipe.</p>
+
+    <div class="card" style="border-left: 3px solid var(--accent);">
+      <div class="card-title">What it covers</div>
+      <div class="card-body">
+        Market selection &nbsp;·&nbsp; Supply side build &nbsp;·&nbsp; Demand side build &nbsp;·&nbsp; Copy (3-step sequences for SBA / OSHA / FDA / EPA / DOT) &nbsp;·&nbsp; Pricing logic &nbsp;·&nbsp; Instantly MCP workflow
+      </div>
+    </div>
+
+    <h3>How to call it</h3>
+    <div class="trigger-list">
+      <span class="trigger">/connector-kb</span>
+      <span class="trigger">build supply side</span>
+      <span class="trigger">build demand side</span>
+      <span class="trigger">pull a penalty market</span>
+      <span class="trigger">pick a market</span>
+      <span class="trigger">which lane</span>
+      <span class="trigger">write the copy</span>
+      <span class="trigger">set up a campaign</span>
+      <span class="trigger">push leads</span>
+      <span class="trigger">stock supply</span>
+      <span class="trigger">stock demand</span>
+      <span class="trigger">build the list</span>
+      <span class="trigger">connector model</span>
+    </div>
+
+    <hr class="divider" />
+
+    <h3>Pricing logic</h3>
+    <ul class="rule-list">
+      <li><span class="rule-num" style="color:var(--green)">S</span> Supply pays monthly — retainer for priority access + ongoing sourcing. This is where it compounds.</li>
+      <li><span class="rule-num" style="color:var(--amber)">D</span> Demand pays once — episodic, bleeding-now problem. Access / placement / success / packaging fees.</li>
+      <li><span class="rule-num" style="color:var(--accent)">!</span> Close supply first. They're in buying mode with budget for pipeline; ROI is obvious.</li>
+    </ul>
+
+    <hr class="divider" />
+
+    <h3>Knowledge base</h3>
+    <div class="card">
+      <div class="card-body" style="font-family: var(--mono); font-size: 11px; line-height: 2; color: #6b6b7a;">
+        knowledge/01-connector-model.md<br/>
+        knowledge/02-demand-doctrine.md<br/>
+        knowledge/03-pricing-and-the-call.md<br/>
+        knowledge/04-penalty-markets-playbook.md<br/>
+        playbooks/building-supply-side.md<br/>
+        playbooks/building-demand-side.md<br/>
+        playbooks/instantly-mcp.md<br/>
+        templates/copy-bones.md<br/>
+        scripts/supersearch_pull.py
+      </div>
+    </div>
+  </section>
+
+  <!-- SKILL: 2-MIN-FLEX-KIT -->
+  <section id="flex-kit">
+    <h2>2-min-flex-kit</h2>
+    <p>Builds a clean prospecting CSV — name, title, company, verified email — dropped to Desktop. Two sourcing modes.</p>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;">
+      <div class="card" style="border-top: 2px solid var(--green);">
+        <div class="card-title"><span class="badge badge-green">Supply Side</span></div>
+        <div class="card-body">
+          Companies that <em>do</em> a type of work.<br/>
+          Source: Instantly Supersearch<br/>
+          Hit rate: ~60–80%
+        </div>
+      </div>
+      <div class="card" style="border-top: 2px solid var(--amber);">
+        <div class="card-title"><span class="badge badge-amber">Demand Side</span></div>
+        <div class="card-body">
+          Companies under EPA enforcement that <em>need</em> the work.<br/>
+          Source: EPA ECHO (free, public)<br/>
+          Hit rate: ~10–15%<br/>
+          <strong style="color:var(--amber);">Pull ~900 to land ~100 clean leads.</strong>
+        </div>
+      </div>
+    </div>
+
+    <h3>How to call it</h3>
+    <div class="trigger-list">
+      <span class="trigger">/2-min-flex-kit</span>
+      <span class="trigger">2 min flex</span>
+      <span class="trigger">flex demand</span>
+      <span class="trigger">echo flex</span>
+      <span class="trigger">build me a lead list</span>
+      <span class="trigger">pull supply leads</span>
+      <span class="trigger">pull demand leads</span>
+      <span class="trigger">EPA enforcement leads</span>
+    </div>
+
+    <h3>What to expect</h3>
+    <ul class="rule-list">
+      <li><span class="rule-num">01</span> Makes judgment calls and goes. No permission asks mid-run.</li>
+      <li><span class="rule-num">02</span> Surfaces low hit rates and thin pools early — proposes a fix.</li>
+      <li><span class="rule-num">03</span> Final summary: count, verified count, dropped, why, file path.</li>
+      <li><span class="rule-num">04</span> Never pushes to Instantly unless you explicitly ask.</li>
+      <li><span class="rule-num">05</span> If asked to push: demand leads in a separate campaign, never merged with supply.</li>
+    </ul>
+
+    <h3>Keys required</h3>
+    <div class="trigger-list">
+      <span class="trigger">APOLLO_KEY</span>
+      <span class="trigger">ANYMAILFINDER_KEY</span>
+      <span class="trigger">INSTANTLY_KEY (supply only)</span>
+    </div>
+    <p style="margin-top:10px; font-size:12px;">Set in: <code>.claude/skills/2-min-flex-kit/setup/keys.local.txt</code></p>
+  </section>
+
+  <!-- SKILL: COMPANIES-HIRING -->
+  <section id="companies-hiring">
+    <h2>companies-hiring</h2>
+    <p>Finds companies provably hiring a specific role in a US metro, with verified decision-maker contacts. Source is US Department of Labor H-1B filings — not job boards.</p>
+
+    <div class="card" style="border-left: 3px solid var(--green); margin-bottom: 20px;">
+      <div class="card-title">The signal</div>
+      <div class="card-body">When a US company hires a foreign engineer, the law forces a DOL filing first — and the government publishes every form. Each certified filing = company actively hiring, plus the name, title, email, and phone of the person handling it. Job boards say "maybe hiring." This says "spent $10–15K proving it."</div>
+    </div>
+
+    <h3>How to call it</h3>
+    <div class="trigger-list">
+      <span class="trigger">/companies-hiring</span>
+      <span class="trigger">give me N companies hiring [role] in [city]</span>
+      <span class="trigger">companies provably hiring</span>
+      <span class="trigger">hiring companies with verified contacts</span>
+    </div>
+    <p style="margin-top:10px; font-size:12px; color: var(--muted);">Example: <code>give me 200 companies hiring software engineers in Austin</code></p>
+
+    <h3>What you get</h3>
+    <div class="card">
+      <div class="card-body">
+        Company &nbsp;·&nbsp; Contact name &nbsp;·&nbsp; Title &nbsp;·&nbsp; Verified email &nbsp;·&nbsp; Phone &nbsp;·&nbsp; Job title filed &nbsp;·&nbsp; Declared wage &nbsp;·&nbsp; Est. placement fee (20%) &nbsp;·&nbsp; Filing count &nbsp;·&nbsp; Filing date
+      </div>
+    </div>
+
+    <h3>What to expect</h3>
+    <ul class="rule-list">
+      <li><span class="rule-num">01</span> Will state expected credit burn before running verify. Default cap 200 = ~40 AMF credits.</li>
+      <li><span class="rule-num">02</span> Under ~150 unique employers: stops and tells you. Thin list is a finding, not a failure.</li>
+      <li><span class="rule-num">03</span> FAANG/enterprise flagged as <code>skipped_enterprise</code>. The money is mid-list: 1–5 filings, founder direct email.</li>
+      <li><span class="rule-num">04</span> Native DOL email used first (~92% deliverable). Enrichment credits only if that fails.</li>
+      <li><span class="rule-num">05</span> Ends at verified list + summary. Never sends anything.</li>
+    </ul>
+
+    <h3>Metro reference (FY2026 Q2)</h3>
+    <div class="trigger-list">
+      <span class="trigger">Dallas ~1,700</span>
+      <span class="trigger">NYC ~1,300</span>
+      <span class="trigger">Austin ~850</span>
+      <span class="trigger" style="border-color: var(--amber); color: var(--amber);">Miami ~125 — thin, flag it</span>
+    </div>
+
+    <h3>Keys required</h3>
+    <div class="trigger-list">
+      <span class="trigger">AMF_API_KEY</span>
+    </div>
+    <p style="margin-top:10px; font-size:12px;">Set in: <code>.claude/skills/companies-hiring/.env</code> — no "Bearer" prefix in Authorization header.</p>
+  </section>
+
+  <!-- KEYS -->
+  <section id="keys">
+    <div class="section-label">Setup</div>
+    <h2>Keys</h2>
+    <p>All keys stored locally. None in version control. Never echoed to screen.</p>
+
+    <table class="keys-table">
+      <thead>
+        <tr>
+          <th>Key</th>
+          <th>Used by</th>
+          <th>Where to set it</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>APOLLO_KEY</td>
+          <td>2-min-flex-kit</td>
+          <td><code>skills/2-min-flex-kit/setup/keys.local.txt</code></td>
+        </tr>
+        <tr>
+          <td>ANYMAILFINDER_KEY</td>
+          <td>2-min-flex-kit, companies-hiring</td>
+          <td><code>skills/2-min-flex-kit/setup/keys.local.txt</code><br/><code>skills/companies-hiring/.env</code></td>
+        </tr>
+        <tr>
+          <td>INSTANTLY_KEY</td>
+          <td>2-min-flex-kit (supply side only)</td>
+          <td><code>skills/2-min-flex-kit/setup/keys.local.txt</code></td>
+        </tr>
+        <tr>
+          <td>AMF_API_KEY</td>
+          <td>companies-hiring</td>
+          <td><code>skills/companies-hiring/.env</code> — no Bearer prefix</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+</main>
+
+<script>
+  // Highlight active nav link on scroll
+  const sections = document.querySelectorAll('section[id]');
+  const links = document.querySelectorAll('nav a');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector(`nav a[href="#${entry.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-30% 0px -60% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>
