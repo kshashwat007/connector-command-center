@@ -411,6 +411,12 @@
 
   <div class="nav-section">Playbooks</div>
   <a href="#osha-lane">OSHA lane</a>
+  <a href="#fmcsa-dot">FMCSA / DOT</a>
+
+  <div class="nav-section">Recipes</div>
+  <a href="#supply-side">Supply side build</a>
+  <a href="#demand-side">Demand side build</a>
+  <a href="#copy-bones">Copy bones</a>
 
   <div class="nav-section">Setup</div>
   <a href="#keys">Keys</a>
@@ -875,6 +881,145 @@
       <span class="trigger">ANYMAILFINDER_KEY</span>
     </div>
     <p style="margin-top:10px; font-size:12px;">DOL key: free at <code>dataportal.dol.gov</code> — register, then API key (~2 min).</p>
+  </section>
+
+  <!-- PLAYBOOK: FMCSA / DOT -->
+  <section id="fmcsa-dot">
+    <h2>FMCSA / DOT</h2>
+    <p>Trucking carriers flagged on FMCSA safety scores. Free public data, refreshed monthly. Bad scores = lost freight contracts + insurance spikes + out-of-service orders. Deep fixer ecosystem — compliance consultants, drug/alcohol TPAs, physicals, CDL training, fleet maintenance.</p>
+
+    <div class="card" style="border-left: 3px solid var(--amber);">
+      <div class="card-title">The signal</div>
+      <div class="card-body">High maintenance/CSA measure, out-of-service inspections above threshold. Data is public on FMCSA SAFER/SMS. Everything joins on <code>dot_number</code>. Census already carries phone + email for many carriers — verify native data; don't over-enrich with third-party tools that produce false matches on small operators.</div>
+    </div>
+
+    <h3>Demand side — flagged carriers</h3>
+    <ul class="rule-list" style="margin-top:10px;">
+      <li><span class="rule-num">01</span>Pull safety scores dataset for flagged carriers — high maintenance/CSA, out-of-service inspections above threshold. <strong style="color:var(--red)">Numeric fields come back as text — cast them</strong> in <code>$where</code>/<code>$order</code> (e.g. <code>vehicle_oos_insp_total::number &gt; 5</code>).</li>
+      <li><span class="rule-num">02</span>Join to carrier census on <code>dot_number</code> for legal name, phone, email. Keep US, keep rows with an email.</li>
+      <li><span class="rule-num">03</span>Verify native emails via AnyMailFinder. Stale gmail/yahoo on tiny operators = phone-first, not a failure.</li>
+      <li><span class="rule-num">04</span>Derive first name from email local-part where it's a person; fall back to "there". Bake into <code>personalization</code>.</li>
+    </ul>
+
+    <h3>Supply side — the fixer ecosystem</h3>
+    <div class="card" style="margin-top:10px;">
+      <div class="card-body">
+        <strong style="color:var(--text)">Keywords (lane-anchored):</strong> DOT compliance, FMCSA, motor carrier, trucking safety, DOT consultant, DOT drug testing, DOT physical, fleet maintenance, truck repair, CDL training, fleet safety<br/><br/>
+        <strong style="color:var(--text)">Exclude:</strong> software, telematics, GPS, camera, platform, environmental, OSHA, food safety<br/><br/>
+        <strong style="color:var(--text)">Titles:</strong> Owner, Founder, President, CEO, Principal, Managing Member, VP, Director, Safety Director<br/><br/>
+        <strong style="color:var(--text)">Fixer types:</strong> DOT compliance consultants &nbsp;·&nbsp; drug/alcohol testing TPAs &nbsp;·&nbsp; DOT physicals/occupational health &nbsp;·&nbsp; driver qualification/background screening &nbsp;·&nbsp; fleet maintenance/mobile truck repair
+      </div>
+    </div>
+
+    <h3>Key pitfall</h3>
+    <div class="card" style="border-left: 3px solid var(--red);">
+      <div class="card-body">Keywords like "safety" or "compliance" alone bleed into OSHA, food safety, industrial. Anchor to the lane (DOT, FMCSA, motor carrier, trucking) and exclude out-of-lane verticals — then let reply types tell you which fixer sub-type closes to a retainer.</div>
+    </div>
+
+    <h3>Data sources</h3>
+    <div class="trigger-list">
+      <span class="trigger">FMCSA SAFER — safety scores</span>
+      <span class="trigger">FMCSA SMS — CSA measures</span>
+      <span class="trigger">Carrier Census — phone + email</span>
+    </div>
+    <p style="margin-top:10px; font-size:12px;">All free, all public. Join on <code>dot_number</code>. See <code>knowledge/04-penalty-markets-playbook.md</code> for the full worked example.</p>
+  </section>
+
+  <!-- RECIPE: SUPPLY SIDE BUILD -->
+  <section id="supply-side">
+    <div class="section-label">Recipes</div>
+    <h2>Supply Side Build</h2>
+    <p>Get verified work emails + names for the fixers in your market, loaded into a campaign. Works for any lane. Worked example: 500 DOT-compliance / trucking-fixer suppliers.</p>
+
+    <ul class="rule-list" style="margin-top:10px;">
+      <li><span class="rule-num">01</span><span><strong style="color:var(--text)">Pick the lane filter.</strong> Lane-anchored keywords (not generic "safety" or "compliance"). Exclude SaaS/telematics + out-of-lane verticals. Titles: Owner, Founder, President, CEO, Principal, Managing Member, VP, Director, GM, Safety Director.</span></li>
+      <li><span class="rule-num">02</span><span><strong style="color:var(--text)">Enrich via Instantly Super Search.</strong> <code>POST /api/v2/supersearch-enrichment/enrich-leads-from-supersearch</code> with <code>search_filters</code>, <code>work_email_enrichment: true</code>, <code>limit</code>. Returns a <code>resource_id</code> (lead list) — poll until it fills. No third-party email finder needed for B2B supply.</span></li>
+      <li><span class="rule-num">03</span><span><strong style="color:var(--text)">Don't judge on a single preview.</strong> Super Search previews are capped (~50, in API default order) — not representative. Exhaust the pool (state fan-out or the native enrichment job) before deciding on a filter.</span></li>
+      <li><span class="rule-num">04</span><span><strong style="color:var(--text)">Bake personalization.</strong> Every lead gets a <code>personalization</code> variable with first name already inside. Body is just <code>{{personalization}}</code>. Verify zero empties.</span></li>
+      <li><span class="rule-num">05</span><span><strong style="color:var(--text)">Push via Instantly MCP.</strong> Verify real end-state: pull leads back, confirm campaign attachment + non-empty <code>first_name</code> / <code>personalization</code> before declaring done.</span></li>
+    </ul>
+
+    <h3>Quirks</h3>
+    <ul class="rule-list">
+      <li><span class="rule-num" style="color:var(--amber)">!</span>Broad keyword filter = thousands of leads but noisy. Narrow "pure consultant" filter = clean but small. Sweet spot: lane-anchored breadth.</li>
+      <li><span class="rule-num" style="color:var(--amber)">!</span>Adding leads already in the workspace with <code>skip_if_in_campaign: true</code> will skip them — they won't attach. Omit the skip flag to attach them.</li>
+      <li><span class="rule-num" style="color:var(--amber)">!</span>To confirm what's in a campaign, search specific lead emails and check the <code>campaign</code> field — more reliable than filtering by <code>campaign_id</code>.</li>
+    </ul>
+
+    <h3>Source</h3>
+    <p style="font-size:12px;"><code>playbooks/building-supply-side.md</code></p>
+  </section>
+
+  <!-- RECIPE: DEMAND SIDE BUILD -->
+  <section id="demand-side">
+    <h2>Demand Side Build</h2>
+    <p>Get companies hit by a public enforcement event with verified emails, loaded into a campaign. Works for any lane with a public enforcement database. Worked example: 200 FMCSA-flagged carriers with verified emails.</p>
+
+    <ul class="rule-list" style="margin-top:10px;">
+      <li><span class="rule-num">01</span><span><strong style="color:var(--text)">Pull flagged accounts.</strong> Query the enforcement database for high-severity cases. Cast numeric fields (<code>field::number &gt; threshold</code>). Floor ~150, target up to ~400. Never ship 20–30 — volume is credibility.</span></li>
+      <li><span class="rule-num">02</span><span><strong style="color:var(--text)">Join to census/contact data</strong> on the shared key (e.g. <code>dot_number</code> for FMCSA) — legal name, phone, email. Keep US, keep rows with an email. Chunk ID lookups ~100 per query.</span></li>
+      <li><span class="rule-num">03</span><span><strong style="color:var(--text)">Verify emails.</strong> AnyMailFinder <code>POST /v5.1/verify-email</code>, header <code>Authorization: &lt;key&gt;</code> (no "Bearer" prefix), body <code>{"email": "..."}</code> → <code>email_status</code>. Keep only <code>valid</code>. Stale gmail/yahoo on small operators = phone-first, not a failure.</span></li>
+      <li><span class="rule-num">04</span><span><strong style="color:var(--text)">Resolve first name.</strong> Derive from email local-part where it's a person (<code>scott@…</code> → Scott); fall back to "there". Bake into <code>personalization</code>.</span></li>
+      <li><span class="rule-num">05</span><span><strong style="color:var(--text)">Push via Instantly MCP.</strong> Verify every lead has non-empty <code>first_name</code> and <code>personalization</code> before declaring done.</span></li>
+    </ul>
+
+    <div class="card" style="border-left: 3px solid var(--accent); margin-top:20px;">
+      <div class="card-title">Demand vs supply enrichment — key difference</div>
+      <div class="card-body">Supply = real B2B firms → Instantly Super Search works well. Demand (enforced companies, often small operators) = the public database IS your contact source. Third-party people-finders have poor coverage here and produce false matches. Verify the native data; don't over-engineer it.</div>
+    </div>
+
+    <h3>Source</h3>
+    <p style="font-size:12px;"><code>playbooks/building-demand-side.md</code></p>
+  </section>
+
+  <!-- RECIPE: COPY BONES -->
+  <section id="copy-bones">
+    <h2>Copy Bones</h2>
+    <p>The same skeleton wins across markets. Swap the market nouns, keep the structure. First email signals + qualifies capacity/timing + soft CTA. Two short follow-ups. 60-90 words max on the opener.</p>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom: 20px;">
+      <div class="card" style="border-top: 2px solid var(--green);">
+        <div class="card-title"><span class="badge badge-green">Supply</span> to the fixers</div>
+        <div class="card-body" style="line-height:1.9;">
+          <strong style="color:var(--muted)">Subject:</strong> <code>{{firstName}}, [market] [service]</code><br/><br/>
+          <em>Step 1:</em> "Hey {{firstName}} — I have [demand-side accounts with the fresh problem] actively looking for [your service] right now. Before I route anyone anywhere, wanted to understand your capacity and whether the fit is there. Worth a quick call?"<br/><br/>
+          <em>Step 2 (blank subject, +1 day):</em> "Hey {{firstName}} — do you have capacity for new clients right now?"<br/><br/>
+          <em>Step 3 (blank subject, +1 day):</em> "Leaving the door open. When you're ready for more clients, I'm one reply away."
+        </div>
+      </div>
+      <div class="card" style="border-top: 2px solid var(--amber);">
+        <div class="card-title"><span class="badge badge-amber">Demand</span> to the bleeding accounts</div>
+        <div class="card-body" style="line-height:1.9;">
+          <strong style="color:var(--muted)">Subject:</strong> <code>{{firstName}}, [market] [service]</code><br/><br/>
+          <em>Step 1:</em> "Hey {{firstName}} — I'm connected with [fixers] who've handled [the problem] hundreds of times — [2-3 specifics]. Before I connect anyone, wanted to check if the timing makes sense on your end. Worth a quick call?"<br/><br/>
+          <em>Step 2 (blank subject, +1 day):</em> "Hey {{firstName}} — is this still open on your end right now?"<br/><br/>
+          <em>Step 3 (blank subject, +1 day):</em> "Leaving the door open. Whenever the timing's right, I'm one reply away."
+        </div>
+      </div>
+    </div>
+
+    <h3>DOT live examples (proven)</h3>
+    <div class="card">
+      <div class="card-body" style="line-height:1.9;">
+        <strong style="color:var(--green)">Supply step 1:</strong><br/>
+        "Hey {first} — I have trucking carriers that just got flagged on their FMCSA safety scores actively looking for DOT compliance support right now. Before I route anyone anywhere, wanted to understand your capacity and whether the fit is there. Worth a quick call?"<br/><br/>
+        <strong style="color:var(--amber)">Demand step 1:</strong><br/>
+        "Hey {first} — I'm connected with DOT compliance specialists who've handled FMCSA enforcement situations hundreds of times — out-of-service orders, CSA interventions, audit prep. Before I connect anyone, wanted to check if the timing makes sense on your end. Worth a quick call?"
+      </div>
+    </div>
+
+    <h3>Rules</h3>
+    <ul class="rule-list">
+      <li><span class="rule-num">01</span>Market-level signal — never name the exact scrape ("companies under compliance pressure," not "I saw your citation").</li>
+      <li><span class="rule-num">02</span>One specific asset, not a brochure. Sharpness beats explanation.</li>
+      <li><span class="rule-num">03</span>Subject carries the first name; body opener carries it too.</li>
+      <li><span class="rule-num">04</span>Blank subjects on steps 2-3 so they thread.</li>
+      <li><span class="rule-num">05</span>No links anywhere. <code>track_opens:false</code>, <code>track_clicks:false</code>. Stop on reply.</li>
+      <li><span class="rule-num">06</span>The proof line in demand copy is the single biggest lever. It must be true. No number = omit the line entirely.</li>
+    </ul>
+
+    <h3>Source</h3>
+    <p style="font-size:12px;"><code>templates/copy-bones.md</code></p>
   </section>
 
   <!-- KEYS -->
